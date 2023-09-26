@@ -5,9 +5,9 @@ import (
 	"block_chain/block_structure/transaction"
 	"block_chain/database/block"
 	"block_chain/database/block_control"
-	"block_chain/initalize"
 	"block_chain/utils"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
 )
@@ -107,6 +107,7 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 			connections = append(connections, val)
 		case b := <-BroadcastBlockChannel:
 			response, err := json.Marshal(BroadcastBlock{Block: b})
+			fmt.Println(b.BlockHash)
 			for _, connection := range connections {
 				if err != nil {
 					SentErrorMessage(connection, "Error to send block")
@@ -141,7 +142,7 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 		if err != nil {
 			continue
 		}
-		go initalize.InitBlocks(conn)
+		//go initalize.InitBlocks(conn)
 		ConnectionChannel <- conn
 	}
 

@@ -3,7 +3,7 @@ package receive_validate_transaction
 import (
 	"block_chain/block_structure/blockchain"
 	"block_chain/block_structure/transaction"
-	TransactionUtils "block_chain/block_structure/utils"
+	transactionUtils "block_chain/block_structure/utils"
 	blockdb "block_chain/database/block"
 	"block_chain/database/block_control"
 	"block_chain/database/utxo"
@@ -56,7 +56,7 @@ func ReceiveTransaction(TransactionChannel chan transaction.Transaction, Broadca
 						continue
 					}
 					BroadcastTransactionChannel <- t
-					BlockTransactionChannel <- TransactionUtils.ConvertTransaction(t)
+					BlockTransactionChannel <- transactionUtils.ConvertTransaction(t)
 				}
 			}
 		default:

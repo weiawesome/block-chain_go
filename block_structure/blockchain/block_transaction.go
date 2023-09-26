@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"block_chain/block_structure/transaction"
 	"encoding/json"
 	"strconv"
 )
@@ -32,4 +33,17 @@ func (bt *BlockTransaction) ToString() (string, error) {
 		return "", err
 	}
 	return string(fromJson) + string(toJson) + strconv.FormatFloat(bt.Fee, 'f', -1, 64), nil
+}
+
+func ConvertTransaction(transaction transaction.Transaction) BlockTransaction {
+	var bt BlockTransaction
+	bt.TransactionHash = transaction.TransactionHash
+	bt.Fee = transaction.Fee
+	for _, from := range transaction.From {
+		bt.From = append(bt.From, From{UTXOHash: from.UTXOHash, Index: from.Index})
+	}
+	for _, to := range transaction.To {
+		bt.To = append(bt.To, To{Address: to.Address, Amount: to.Amount})
+	}
+	return bt
 }

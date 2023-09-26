@@ -2,8 +2,8 @@ package utils
 
 import (
 	"block_chain/block_structure/blockchain"
+	"block_chain/block_structure/blockchain/utils"
 	"block_chain/block_structure/transaction"
-	"block_chain/utils"
 )
 
 func ConvertTransaction(transaction transaction.Transaction) blockchain.BlockTransaction {

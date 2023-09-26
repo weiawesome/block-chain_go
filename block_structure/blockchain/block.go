@@ -1,6 +1,6 @@
 package blockchain
 
-import "block_chain/utils"
+import "block_chain/block_structure/blockchain/utils"
 
 type Block struct {
 	BlockTop          BlockTop           `json:"blockTop"`

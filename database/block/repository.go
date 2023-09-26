@@ -18,9 +18,20 @@ func GetBlock(Hash string) (blockchain.Block, error) {
 
 	return result.Block, err
 }
+
 func SetBlock(Block blockchain.Block) error {
 	BlockCollection := utils.GetBlockCollection()
 	_, err := BlockCollection.InsertOne(context.TODO(), model.BlockKeyValue{BlockHash: Block.BlockHash, Block: Block})
+	return err
+}
+
+func DeleteBlock(Hash string) error {
+	BlockCollection := utils.GetBlockCollection()
+
+	filter := bson.M{model.BlockKey: Hash}
+
+	_, err := BlockCollection.DeleteOne(context.TODO(), filter)
+
 	return err
 }
 

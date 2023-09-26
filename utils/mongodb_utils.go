@@ -22,27 +22,21 @@ const (
 
 var client *mongo.Client
 
-func InitClient(address string) error {
-	clientOptions := options.Client().ApplyURI("mongodb://" + address)
-
-	var err error
-	client, err = mongo.Connect(context.TODO(), clientOptions)
-	if err != nil {
-		return err
-	}
+func BlockCollectInit() error {
 	blockCollection := GetBlockCollection()
-	_, err = blockCollection.Indexes().CreateOne(
+	_, err := blockCollection.Indexes().CreateOne(
 		context.TODO(),
 		mongo.IndexModel{
 			Keys:    map[string]interface{}{BlockKey: 1},
 			Options: options.Index().SetUnique(true),
 		},
 	)
-	if err != nil {
-		return err
-	}
+	return err
+}
+
+func UTXOCollectInit() error {
 	utxoCollection := GetUTXOCollection()
-	_, err = utxoCollection.Indexes().CreateOne(
+	_, err := utxoCollection.Indexes().CreateOne(
 		context.TODO(),
 		mongo.IndexModel{
 			Keys: map[string]interface{}{UTXOKey: 1, UTXOIndex: 1},
@@ -50,17 +44,33 @@ func InitClient(address string) error {
 				SetUnique(true),
 		},
 	)
+	return err
+}
+
+func InitClient(address string) error {
+	var err error
+
+	clientOptions := options.Client().ApplyURI("mongodb://" + address)
+	client, err = mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		return err
 	}
-	return err
-}
-func CloseMongoDb() error {
-	return client.Disconnect(context.TODO())
+
+	err = BlockCollectInit()
+	if err != nil {
+		return err
+	}
+
+	err = UTXOCollectInit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func GetClient() *mongo.Client {
-	return client
+func CloseMongoDb() error {
+	return client.Disconnect(context.TODO())
 }
 
 func GetBlockCollection() *mongo.Collection {

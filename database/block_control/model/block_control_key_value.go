@@ -1,8 +1,10 @@
 package model
 
 const (
-	BlockControlKey   = "type"
-	LastBlockKeyValue = "LastBlock"
+	BlockControlKey        = "type"
+	LastBlockKeyValue      = "LastBlock"
+	CheckedBlockKeyValue   = "CheckedBlock"
+	CandidateBlockKeyValue = "CandidateBlock"
 )
 
 type BlockControl struct {

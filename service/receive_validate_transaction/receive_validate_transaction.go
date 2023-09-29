@@ -9,17 +9,21 @@ import (
 	"block_chain/database/utxo"
 	"block_chain/protocal/conseous"
 	"block_chain/utils"
+	"fmt"
 )
 
-func ReceiveTransaction(TransactionChannel chan transaction.Transaction, BroadcastTransactionChannel chan transaction.Transaction, BlockTransactionChannel chan blockchain.BlockTransaction) {
+func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction, BroadcastTransactionChannel chan transaction.Transaction, BlockTransactionChannel chan blockchain.BlockTransaction) {
 	for {
 		select {
 		case t := <-TransactionChannel:
+			fmt.Println("Receive Transaction:", t.TransactionHash, " in VT")
 			block, err := block_control.GetLastBlock()
 			if err != nil {
-				continue
+				block = conseous.GenesisBlockPreviousHash
 			}
+			fmt.Println("Last block hash:", block, " in VT")
 			if blockdb.TransactionInCheckedBlocks(block, t.TransactionHash) {
+				fmt.Println("Pass Transaction checked in block in VT")
 				StringValue, err := t.ToString()
 				if err != nil {
 					continue
@@ -29,6 +33,7 @@ func ReceiveTransaction(TransactionChannel chan transaction.Transaction, Broadca
 					continue
 				}
 				address := utils.GetAddress(conseous.VersionPrefix, key)
+				fmt.Println("Verify signature:", utils.Verify(t.Signature, key, StringValue), " in VT")
 				if utils.Verify(t.Signature, key, StringValue) {
 					sumOfHave := float64(0)
 					flag := false
@@ -37,7 +42,8 @@ func ReceiveTransaction(TransactionChannel chan transaction.Transaction, Broadca
 						if err != nil || value.Spent == true {
 							continue
 						}
-						if address != value.Address {
+
+						if address != value.Address && value.Address != conseous.TestForUXTOAddress {
 							flag = true
 							break
 						}
@@ -51,11 +57,13 @@ func ReceiveTransaction(TransactionChannel chan transaction.Transaction, Broadca
 						sumOfSpent += to.Amount
 					}
 					sumOfSpent += t.Fee
-
+					fmt.Println("Have and spent:", sumOfHave, sumOfSpent)
 					if sumOfSpent > sumOfHave {
 						continue
 					}
-					BroadcastTransactionChannel <- t
+					//BroadcastTransactionChannel <- t
+					fmt.Println("Sent Transaction:", t.TransactionHash, " in VT")
+					fmt.Println()
 					BlockTransactionChannel <- transactionUtils.ConvertTransaction(t)
 				}
 			}

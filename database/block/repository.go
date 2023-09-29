@@ -13,6 +13,22 @@ func GetBlock(Hash string) (blockchain.Block, error) {
 	BlockCollection := utils.GetBlockCollection()
 	filter := bson.M{model.BlockKey: Hash}
 
+	var finalResult model.BlockKeyValue
+	cursor, err := BlockCollection.Find(context.TODO(), filter)
+	for cursor.Next(context.TODO()) {
+		var result model.BlockKeyValue
+		if err := cursor.Decode(&result); err != nil {
+			return finalResult.Block, err
+		}
+		finalResult = result
+	}
+	return finalResult.Block, err
+}
+
+func GetBlockByBlockHeight(Height int64) (blockchain.Block, error) {
+	BlockCollection := utils.GetBlockCollection()
+	filter := bson.M{model.BlockHeightKey: Height}
+
 	var result model.BlockKeyValue
 	err := BlockCollection.FindOne(context.TODO(), filter).Decode(&result)
 
@@ -21,7 +37,7 @@ func GetBlock(Hash string) (blockchain.Block, error) {
 
 func SetBlock(Block blockchain.Block) error {
 	BlockCollection := utils.GetBlockCollection()
-	_, err := BlockCollection.InsertOne(context.TODO(), model.BlockKeyValue{BlockHash: Block.BlockHash, Block: Block})
+	_, err := BlockCollection.InsertOne(context.TODO(), model.BlockKeyValue{BlockHash: Block.BlockHash, BlockHeight: Block.BlockTop.BlockHeight, Block: Block})
 	return err
 }
 
@@ -49,4 +65,16 @@ func TransactionInCheckedBlocks(BlockHash string, TransactionHash string) bool {
 		}
 	}
 	return true
+}
+
+func CheckGenerateSpeed(Height int64) (bool, error) {
+	blockLower, errLower := GetBlockByBlockHeight(Height - 1)
+	if errLower != nil {
+		return false, errLower
+	}
+	blockUpper, errUpper := GetBlockByBlockHeight(Height - conseous.DifficultyCycle)
+	if errUpper != nil {
+		return false, errUpper
+	}
+	return blockLower.BlockTop.TimeStamp-blockUpper.BlockTop.TimeStamp > conseous.AverageBlockGenerateTime*conseous.DifficultyCycle, nil
 }

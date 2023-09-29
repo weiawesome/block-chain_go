@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -40,10 +39,7 @@ func UTXOCollectInit() error {
 	_, err := utxoCollection.Indexes().CreateOne(
 		context.TODO(),
 		mongo.IndexModel{
-			Keys: bson.D{
-				{Key: UTXOKey, Value: 1},
-				{Key: UTXOIndex, Value: 1},
-			},
+			Keys: map[string]interface{}{UTXOKey: 1, UTXOIndex: 1},
 			Options: options.Index().
 				SetUnique(true),
 		},
@@ -65,11 +61,10 @@ func InitClient(address string) error {
 		return err
 	}
 
-	err = UTXOCollectInit()
-	if err != nil {
-		return err
-	}
-
+	//err = UTXOCollectInit()
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }
 

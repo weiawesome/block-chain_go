@@ -5,6 +5,8 @@ import (
 	"block_chain/block_structure/transaction"
 	"block_chain/database/block"
 	"block_chain/database/block_control"
+	"block_chain/initalize"
+	"block_chain/protocal/conseous"
 	"block_chain/utils"
 	"encoding/json"
 	"fmt"
@@ -12,13 +14,70 @@ import (
 	"strings"
 )
 
-func SentErrorMessage(conn net.Conn, message string) {
-	response, err := json.Marshal(ErrorMessage{Error: message})
+func InitBlocks(conn net.Conn) {
+	flag := false
+	request, err := json.Marshal(InitBlock{BlockHash: InitQuery})
 	if err != nil {
 		utils.LogError(err.Error())
+		return
 	}
-	SendContent(conn, string(response))
+	SendContent(conn, string(request))
+	for {
+		totalResponse := ""
+		buffer := make([]byte, BufferSize)
+		for {
+			n, err := conn.Read(buffer)
+			if err != nil {
+				utils.LogError(err.Error())
+				break
+			}
+			response := string(buffer[n:])
+			totalResponse += response
+			if strings.HasSuffix(totalResponse, SuffixString) {
+				totalResponse = totalResponse[:len(totalResponse)-len(SuffixString)]
+				break
+			}
+		}
+
+		var data interface{}
+		err := json.Unmarshal([]byte(totalResponse), &data)
+		if err != nil {
+			utils.LogError(err.Error())
+			return
+		}
+		switch v := data.(type) {
+		case ReturnBlock:
+			if err := block.SetBlock(v.Block); err == nil {
+				err := initalize.BuildUTXO(v.Block)
+				if err != nil {
+					return
+				}
+				if v.Block.BlockTop.PreviousHash == conseous.GenesisBlockPreviousHash {
+					return
+				}
+				request, err := json.Marshal(InitBlock{BlockHash: v.Block.BlockTop.PreviousHash})
+				if err != nil {
+					utils.LogError(err.Error())
+					return
+				}
+				SendContent(conn, string(request))
+				if !flag {
+					err := block_control.SetLastBlock(v.Block.BlockHash)
+					if err != nil {
+						return
+					}
+				}
+				flag = true
+			} else {
+				return
+			}
+		default:
+			SentErrorMessage(conn, "Unknown Request")
+			return
+		}
+	}
 }
+
 func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Transaction, blockChannel chan blockchain.Block) {
 	defer func(conn net.Conn) {
 		err := conn.Close()
@@ -32,19 +91,20 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 	for {
 		totalRequest := ""
 		for {
-			n, err := conn.Read(buffer)
+			_, err := conn.Read(buffer)
 			if err != nil {
 				utils.LogError(err.Error())
 				break
 			}
-			request := string(buffer[n:])
+			request := string(buffer)
 			totalRequest += request
-			if strings.HasSuffix(totalRequest, SuffixString) {
-				totalRequest = totalRequest[:len(totalRequest)-len(SuffixString)]
+			if strings.ContainsAny(totalRequest, SuffixString) {
+				totalRequest = totalRequest[:strings.Index(totalRequest, SuffixString)]
+				fmt.Println("Success")
 				break
 			}
 		}
-
+		fmt.Println(totalRequest)
 		var data interface{}
 		err := json.Unmarshal([]byte(totalRequest), &data)
 		if err != nil {
@@ -53,9 +113,12 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 		}
 		switch v := data.(type) {
 		case BroadcastTransaction:
+			fmt.Println(v.Transaction.TransactionHash)
 			transactionChannel <- v.Transaction
+			break
 		case BroadcastBlock:
 			blockChannel <- v.Block
+			break
 		case InitBlock:
 			if v.BlockHash == InitQuery {
 				lastBlock, err := block_control.GetLastBlock()
@@ -92,8 +155,11 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 				}
 				SendContent(conn, string(response))
 			}
+			break
 		case ErrorMessage:
+			fmt.Println(v.Error)
 			utils.LogError(v.Error)
+			break
 		default:
 			SentErrorMessage(conn, "Unknown request")
 		}
@@ -104,10 +170,10 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 	for {
 		select {
 		case val := <-ConnectionChannel:
+			fmt.Println(val)
 			connections = append(connections, val)
 		case b := <-BroadcastBlockChannel:
 			response, err := json.Marshal(BroadcastBlock{Block: b})
-			fmt.Println(b.BlockHash)
 			for _, connection := range connections {
 				if err != nil {
 					SentErrorMessage(connection, "Error to send block")
@@ -118,6 +184,7 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 			}
 		case t := <-BroadcastTransactionChannel:
 			response, err := json.Marshal(BroadcastTransaction{Transaction: t})
+			fmt.Println(t.TransactionHash)
 			for _, connection := range connections {
 				if err != nil {
 					SentErrorMessage(connection, "Error to send transaction")
@@ -132,7 +199,6 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 
 	}
 }
-
 func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan transaction.Transaction, BlockChannel chan blockchain.Block, BroadcastTransactionChannel chan transaction.Transaction, BroadcastBlockChannel chan blockchain.Block) {
 	ConnectionChannel := make(chan net.Conn)
 	go CommunicateClient(ConnectionChannel, BroadcastTransactionChannel, BroadcastBlockChannel)
@@ -142,7 +208,8 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 		if err != nil {
 			continue
 		}
-		//go initalize.InitBlocks(conn)
+		//go ReceiveReplyClient(conn, TransactionChannel, BlockChannel)
+		//go InitBlocks(conn)
 		ConnectionChannel <- conn
 	}
 
@@ -164,6 +231,7 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 			utils.LogError(err.Error())
 			continue
 		}
+		fmt.Println(conn.RemoteAddr())
 		go ReceiveReplyClient(conn, TransactionChannel, BlockChannel)
 		ConnectionChannel <- conn
 	}

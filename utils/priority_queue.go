@@ -2,9 +2,6 @@ package utils
 
 import (
 	"block_chain/block_structure/blockchain"
-	"block_chain/block_structure/transaction"
-	"container/heap"
-	"fmt"
 )
 
 type PriorityQueue []*blockchain.BlockTransaction
@@ -30,14 +27,4 @@ func (pq *PriorityQueue) Pop() interface{} {
 	item := old[n-1]
 	*pq = old[0 : n-1]
 	return item
-}
-
-func test() {
-	pq := make(PriorityQueue, 0)
-	item1 := &transaction.Transaction{}
-	heap.Push(&pq, item1)
-	for pq.Len() > 0 {
-		item := heap.Pop(&pq).(*transaction.Transaction)
-		fmt.Print(item.Fee)
-	}
 }

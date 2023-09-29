@@ -4,6 +4,7 @@ import (
 	"block_chain/database/block_control/model"
 	"block_chain/utils"
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -11,18 +12,33 @@ import (
 func SetLastBlock(Hash string) error {
 	BlockControlCollection := utils.GetBlockControlCollection()
 
-	filter := bson.M{model.BlockControlKey: model.LastBlockKeyValue}
-	option := options.Replace().SetUpsert(true)
+	deleteFilter := bson.M{model.BlockControlKey: model.LastBlockKeyValue}
 
-	_, err := BlockControlCollection.ReplaceOne(context.TODO(), filter, model.BlockControl{Type: model.LastBlockKeyValue, BlockHash: Hash}, option)
+	_, err := BlockControlCollection.DeleteMany(context.TODO(), deleteFilter)
+	if err != nil {
+		return err
+	}
+
+	insertFilter := bson.M{model.BlockControlKey: model.LastBlockKeyValue}
+	option := options.Replace().SetUpsert(true)
+	_, err = BlockControlCollection.ReplaceOne(context.TODO(), insertFilter, model.BlockControl{Type: model.LastBlockKeyValue, BlockHash: Hash}, option)
 	return err
 }
+
 func GetLastBlock() (string, error) {
 	BlockControlCollection := utils.GetBlockControlCollection()
 
 	filter := bson.M{model.BlockControlKey: model.LastBlockKeyValue}
 	var lastBlock model.BlockControl
-	err := BlockControlCollection.FindOne(context.TODO(), filter).Decode(lastBlock)
+	cursor, err := BlockControlCollection.Find(context.TODO(), filter)
+	for cursor.Next(context.TODO()) {
+		var result model.BlockControl
+		if err := cursor.Decode(&result); err != nil {
+			return "", err
+		}
+		lastBlock = result
+		fmt.Println("Last Block", lastBlock.BlockHash, " in DB repository")
+	}
 	return lastBlock.BlockHash, err
 }
 
@@ -34,14 +50,6 @@ func SetCheckedBlock(Hash string) error {
 
 	_, err := BlockControlCollection.ReplaceOne(context.TODO(), filter, model.BlockControl{Type: model.LastBlockKeyValue, BlockHash: Hash}, option)
 	return err
-}
-func GetCheckedBlock() (string, error) {
-	BlockControlCollection := utils.GetBlockControlCollection()
-
-	filter := bson.M{model.BlockControlKey: model.CheckedBlockKeyValue}
-	var lastBlock model.BlockControl
-	err := BlockControlCollection.FindOne(context.TODO(), filter).Decode(lastBlock)
-	return lastBlock.BlockHash, err
 }
 
 func SetCandidateBlock(Hash string) error {

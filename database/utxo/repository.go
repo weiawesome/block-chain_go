@@ -3,9 +3,11 @@ package utxo
 import (
 	"block_chain/block_structure/blockchain"
 	"block_chain/database/utxo/model"
+	"block_chain/protocal/conseous"
 	"block_chain/utils"
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
+	"math/rand"
 )
 
 func SetUTXO(transaction blockchain.BlockTransaction) error {
@@ -19,6 +21,9 @@ func SetUTXO(transaction blockchain.BlockTransaction) error {
 		}
 	}
 	for i, from := range transaction.From {
+		if from.UTXOHash == conseous.TestForUXTOHash {
+			continue
+		}
 		if utxo, err := GetUTXO(from.UTXOHash, i); err != nil {
 			_, err = UTXOCollection.InsertOne(context.TODO(), model.UTXOKeyValue{TransactionHash: transaction.TransactionHash, Index: i, Spent: true})
 			if err != nil {
@@ -41,6 +46,9 @@ func ReplaceUTXO(value model.UTXOKeyValue) error {
 	return err
 }
 func GetUTXO(TransactionHash string, Index int) (model.UTXOKeyValue, error) {
+	if TransactionHash == conseous.TestForUXTOHash {
+		return model.UTXOKeyValue{TransactionHash: TransactionHash, Index: rand.Int(), Amount: conseous.TestForAmount, Spent: false, Address: conseous.TestForUXTOAddress}, nil
+	}
 	UTXOCollection := utils.GetUTXOCollection()
 	filter := bson.M{model.UTXOKey: TransactionHash, model.UTXOIndex: Index}
 
@@ -48,4 +56,33 @@ func GetUTXO(TransactionHash string, Index int) (model.UTXOKeyValue, error) {
 	err := UTXOCollection.FindOne(context.TODO(), filter).Decode(&result)
 
 	return result, err
+}
+
+func ReverseUTXO(transaction blockchain.BlockTransaction) error {
+	UTXOCollection := utils.GetUTXOCollection()
+	for i := range transaction.To {
+		filter := bson.M{model.UTXOKey: transaction.TransactionHash, model.UTXOIndex: i}
+		_, err := UTXOCollection.DeleteOne(context.TODO(), filter)
+		if err != nil {
+			return err
+		}
+	}
+	for i, from := range transaction.From {
+		if from.UTXOHash == conseous.TestForUXTOHash {
+			continue
+		}
+		if utxo, err := GetUTXO(from.UTXOHash, i); err != nil {
+			_, err = UTXOCollection.InsertOne(context.TODO(), model.UTXOKeyValue{TransactionHash: transaction.TransactionHash, Index: i, Spent: false})
+			if err != nil {
+				return err
+			}
+		} else {
+			utxo.Spent = false
+			err := ReplaceUTXO(utxo)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

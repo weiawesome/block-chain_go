@@ -4,6 +4,7 @@ import "strconv"
 
 type BlockTop struct {
 	Version      int32  `json:"version"`
+	BlockHeight  int64  `json:"block_height"`
 	PreviousHash string `json:"previousHash"`
 	TimeStamp    int64  `json:"timeStamp"`
 	Difficulty   int64  `json:"difficulty"`

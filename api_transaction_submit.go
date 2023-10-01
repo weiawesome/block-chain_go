@@ -24,6 +24,8 @@ func main() {
 	PublicKey = "PublicKey"
 	PrivateKey = "PrivateKey"
 
+	ConnectAddr := "127.0.0.1:8080"
+
 	f := transaction.From{UTXOHash: UTXOHash, Index: Index}
 	t := transaction.To{Address: Address, Amount: Amount}
 
@@ -59,7 +61,7 @@ func main() {
 	fmt.Println()
 	fmt.Println("Signature: ", signature)
 
-	clientAPI := api.ClientAPI{ConnectNodeAddr: "127.0.0.1:8081"}
+	clientAPI := api.ClientAPI{ConnectNodeAddr: ConnectAddr}
 	err = clientAPI.Connect()
 	if err != nil {
 		return

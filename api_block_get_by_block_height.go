@@ -6,12 +6,12 @@ import (
 )
 
 func main() {
-
 	var BlockHeight int64
-
 	BlockHeight = 0
 
-	clientAPI := api.ClientAPI{ConnectNodeAddr: "127.0.0.1:8081"}
+	ConnectAddr := "127.0.0.1:8080"
+
+	clientAPI := api.ClientAPI{ConnectNodeAddr: ConnectAddr}
 	err := clientAPI.Connect()
 	if err != nil {
 		return

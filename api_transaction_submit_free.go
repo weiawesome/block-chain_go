@@ -2,34 +2,19 @@ package main
 
 import (
 	"block_chain/api"
-	"block_chain/protocal/conseous"
-	"block_chain/utils"
-	"fmt"
 )
 
 func main() {
-
 	var Amount float64
-
 	Amount = 0
 
-	pair, err := utils.GenerateKeyPair()
-	if err != nil {
-		return
-	}
-	key, err := utils.DecodePublicKey(pair.PublicKey)
-	if err != nil {
-		return
-	}
-	addr := utils.GetAddress(conseous.VersionPrefix, key)
+	var Addr string
+	Addr = "Address"
 
-	fmt.Println("PublicKey: ", pair.PublicKey)
-	fmt.Println("PrivateKey: ", pair.PrivateKey)
-	fmt.Println("Address: ", addr)
-	fmt.Println("Amount: ", Amount)
+	ConnectAddr := "127.0.0.1:8080"
 
-	clientAPI := api.ClientAPI{ConnectNodeAddr: "127.0.0.1:8081"}
-	err = clientAPI.Connect()
+	clientAPI := api.ClientAPI{ConnectNodeAddr: ConnectAddr}
+	err := clientAPI.Connect()
 	if err != nil {
 		return
 	}
@@ -40,9 +25,8 @@ func main() {
 		}
 	}()
 
-	err = clientAPI.SubmitFreeTransaction(Amount, addr)
+	err = clientAPI.SubmitFreeTransaction(Amount, Addr)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 }

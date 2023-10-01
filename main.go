@@ -13,15 +13,11 @@ import (
 )
 
 func main() {
-	err := utils.InitClient("localhost:27017")
-	if err != nil {
-		return
-	}
-
+	DbAddress := "localhost:27017"
+	NodeAddr := "127.0.0.1:8080"
+	NodeAddresses := []string{}
 	Miners := 1
 
-	NodeAddr := "127.0.0.1:8081"
-	NodeAddresses := []string{}
 	TransactionChannel := make(chan transaction.Transaction)
 	BroadcastTransactionChannel := make(chan transaction.Transaction)
 	BlockTransactionChannel := make(chan blockchain.BlockTransaction)
@@ -31,6 +27,11 @@ func main() {
 	RefreshBlockChannel := make(chan blockchain.Block)
 	MinersBlockChannel := make(chan blockchain.Block)
 	CompleteBlockChannel := make(chan blockchain.Block)
+
+	err := utils.InitClient(DbAddress)
+	if err != nil {
+		return
+	}
 
 	go receive_validate_transaction.ReceiveValidateTransaction(TransactionChannel, BroadcastTransactionChannel, BlockTransactionChannel)
 	go receive_validate_block.ReceiveValidateBlock(BroadcastBlockChannel, MinersSuccessBlockChannel, BlockChannel, RefreshBlockChannel)

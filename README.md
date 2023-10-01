@@ -1,5 +1,6 @@
 # Block Chain 區塊鏈
 > This is a project that I try to build a blockchain by myself.
+> Using go lang to build a blockchain.
 
 ## How to download
 ```shell
@@ -81,6 +82,7 @@ ConnectAddr := "127.0.0.1:8080"
 go api_transaction_submit.go
 ```
 ### Edit Submit the transaction
+[Edit the api_transaction_submit.go](api_transaction_submit.go)
 ```go
 //This is UTXOHash to prove the asset
 UTXOHash = "UTXOHash"

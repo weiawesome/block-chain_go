@@ -18,7 +18,7 @@ func InitBlocks(conn net.Conn) {
 	flag := false
 	request, err := json.Marshal(content.QueryBlock{QueryType: content.QueryByHash, BlockHash: content.InitQuery})
 	if err != nil {
-		fmt.Println("Error found ", err.Error(), " in BN")
+		//fmt.Println("Error found ", err.Error(), " in BN")
 		return
 	}
 	content.SendContent(conn, string(request))
@@ -29,7 +29,7 @@ func InitBlocks(conn net.Conn) {
 		for {
 			_, err := conn.Read(buffer)
 			if err != nil {
-				fmt.Println("Error found ", err.Error(), " in BN")
+				//fmt.Println("Error found ", err.Error(), " in BN")
 				connFlag = true
 				break
 			}
@@ -57,7 +57,7 @@ func InitBlocks(conn net.Conn) {
 				}
 				request, err := json.Marshal(content.QueryBlock{QueryType: content.QueryByHash, BlockHash: data.Block.BlockTop.PreviousHash})
 				if err != nil {
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					return
 				}
 				content.SendContent(conn, string(request))
@@ -95,7 +95,7 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 		for {
 			_, err := conn.Read(buffer)
 			if err != nil {
-				fmt.Println("Error found ", err.Error(), " in BN")
+				//fmt.Println("Error found ", err.Error(), " in BN")
 				flag = true
 				break
 			}
@@ -141,7 +141,7 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 				lastBlock, err := block_control.GetLastBlock()
 				if err != nil {
 					content.SentErrorMessage(conn, "Error to get last block")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				Block, err := block.GetBlock(lastBlock)
@@ -149,13 +149,13 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 				fmt.Println()
 				if err != nil {
 					content.SentErrorMessage(conn, "Error to get block")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				response, err := json.Marshal(content.ReturnBlock{Block: Block})
 				if err != nil {
 					content.SentErrorMessage(conn, "Error to send block")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				content.SendContent(conn, string(response))
@@ -163,13 +163,13 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 				Block, err := block.GetBlock(queryBlockData.BlockHash)
 				if err != nil {
 					content.SentErrorMessage(conn, "Error to get block")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				response, err := json.Marshal(content.ReturnBlock{Block: Block})
 				if err != nil {
 					content.SentErrorMessage(conn, "Error to send block")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				fmt.Println("Sent Block ", Block.BlockHash, " in BN")
@@ -193,7 +193,7 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 			response, err := json.Marshal(returnBlocks)
 			if err != nil {
 				content.SentErrorMessage(conn, "Error to send block")
-				fmt.Println("Error found ", err.Error(), " in BN")
+				//fmt.Println("Error found ", err.Error(), " in BN")
 				continue
 			}
 			fmt.Println("Sent Block by height in BN")
@@ -226,7 +226,7 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 			for _, connection := range connections {
 				if err != nil {
 					content.SentErrorMessage(connection, "Error to send block")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				content.SendContent(connection, string(response))
@@ -239,7 +239,7 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 			for _, connection := range connections {
 				if err != nil {
 					content.SentErrorMessage(connection, "Error to send transaction")
-					fmt.Println("Error found ", err.Error(), " in BN")
+					//fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				content.SendContent(connection, string(response))
@@ -280,7 +280,7 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error found ", err.Error(), " in BN")
+			//fmt.Println("Error found ", err.Error(), " in BN")
 			continue
 		}
 		fmt.Println("Get new node ", conn.RemoteAddr(), " in BN")

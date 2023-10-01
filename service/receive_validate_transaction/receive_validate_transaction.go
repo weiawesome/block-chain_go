@@ -24,17 +24,32 @@ func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction,
 			fmt.Println("Last block hash:", block, " in VT")
 			if blockdb.TransactionInCheckedBlocks(block, t.TransactionHash) {
 				fmt.Println("Pass Transaction checked in block in VT")
-				StringValue, err := t.ToString()
+				transactionValue, err := t.ToString()
 				if err != nil {
 					continue
 				}
-				key, err := utils.DecodePublicKey(t.PublicKey)
-				if err != nil {
-					continue
+
+				SignatureStatus := false
+
+				var address string
+				if t.PublicKey == conseous.MasterPublicKey && t.Signature == conseous.MasterSignature {
+					fmt.Println("Transaction is master in VT")
+					address = conseous.MasterAddress
+					SignatureStatus = true
+				} else {
+					fmt.Println("Transaction is not master in VT")
+					key, err := utils.DecodePublicKey(t.PublicKey)
+					if err != nil {
+						continue
+					}
+					address = utils.GetAddress(conseous.VersionPrefix, key)
+					if utils.Verify(t.Signature, key, transactionValue) {
+						fmt.Println("Transaction Verify passed in VT")
+						SignatureStatus = true
+					}
 				}
-				address := utils.GetAddress(conseous.VersionPrefix, key)
-				fmt.Println("Verify signature:", utils.Verify(t.Signature, key, StringValue), " in VT")
-				if utils.Verify(t.Signature, key, StringValue) || t.Signature == conseous.MasterSignature || t.PublicKey == conseous.MasterPublicKey {
+
+				if SignatureStatus {
 					sumOfHave := float64(0)
 					flag := false
 					for _, from := range t.From {
@@ -42,13 +57,14 @@ func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction,
 						if err != nil || value.Spent == true {
 							continue
 						}
-						if address != value.Address && value.Address != conseous.MasterAddress {
+						if address != value.Address {
 							flag = true
 							break
 						}
 						sumOfHave += value.Amount
 					}
 					if flag {
+						fmt.Println("Fail due to not owner in VT")
 						continue
 					}
 					sumOfSpent := float64(0)
@@ -56,7 +72,8 @@ func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction,
 						sumOfSpent += to.Amount
 					}
 					sumOfSpent += t.Fee
-					fmt.Println("Have and spent:", sumOfHave, sumOfSpent)
+					fmt.Println("User have: ", sumOfHave, " in VT")
+					fmt.Println("User spent: ", sumOfSpent, " in VT")
 					if sumOfSpent > sumOfHave {
 						continue
 					}

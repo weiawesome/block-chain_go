@@ -19,6 +19,7 @@ func SubmitTransaction(Conn net.Conn, From []transaction.From, To []transaction.
 	if err != nil {
 		return err
 	}
+
 	content.SendContent(Conn, string(request))
 	return nil
 }

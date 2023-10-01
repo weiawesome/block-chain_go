@@ -6,6 +6,11 @@ import (
 )
 
 func main() {
+
+	var BlockHeight int64
+
+	BlockHeight = 0
+
 	clientAPI := api.ClientAPI{ConnectNodeAddr: "127.0.0.1:8081"}
 	err := clientAPI.Connect()
 	if err != nil {
@@ -17,7 +22,7 @@ func main() {
 			return
 		}
 	}()
-	blocks, err := clientAPI.GetBlockByHeight(5)
+	blocks, err := clientAPI.GetBlockByHeight(BlockHeight)
 	if err != nil {
 		return
 	}

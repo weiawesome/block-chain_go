@@ -37,7 +37,7 @@ docker run --name mongodb -p 27017:27017 -d mongo
 (Ensure the Miners is working)
 ### Get block by block_hash
 ```shell
-go api_block_get_by_block_hash.go
+go run api_block_get_by_block_hash.go
 ```
 ### Edit Get block by block_hash
 [Edit the api_block_get_by_block_hash.go](api_block_get_by_block_hash.go)
@@ -51,7 +51,7 @@ ConnectAddr:="127.0.0.1:8080"
 ```
 ### Get block by block_height
 ```shell
-go api_block_get_by_block_height.go
+go run api_block_get_by_block_height.go
 ```
 ### Edit Get block by block_height
 [Edit the api_block_get_by_block_height.go](api_block_get_by_block_height.go)
@@ -66,7 +66,7 @@ ConnectAddr := "127.0.0.1:8080"
 
 ### Get the last block 
 ```shell
-go api_block_get_last.go
+go run api_block_get_last.go
 ```
 ### Edit Get the last block
 [Edit the api_block_get_last.go](api_block_get_last.go)
@@ -79,7 +79,7 @@ ConnectAddr := "127.0.0.1:8080"
 (Ensure the Miners is working)
 ### Submit the transaction
 ```shell
-go api_transaction_submit.go
+go run api_transaction_submit.go
 ```
 ### Edit Submit the transaction
 [Edit the api_transaction_submit.go](api_transaction_submit.go)
@@ -112,9 +112,9 @@ ConnectAddr := "127.0.0.1:8080"
 ### Submit the Free transaction
 ```shell
 # submit a transaction with specific address
-go api_transaction_submit_free.go
+go run api_transaction_submit_free.go
 # submit a transaction with generating an address
-go api_transaction_submit_free_random_addr.go 
+go run api_transaction_submit_free_random_addr.go 
 ```
 ### Edit Submit the Free transaction
 [Edit the api_transaction_submit_free.go](api_transaction_submit_free.go)

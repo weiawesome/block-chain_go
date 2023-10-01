@@ -34,7 +34,7 @@ func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction,
 				}
 				address := utils.GetAddress(conseous.VersionPrefix, key)
 				fmt.Println("Verify signature:", utils.Verify(t.Signature, key, StringValue), " in VT")
-				if utils.Verify(t.Signature, key, StringValue) {
+				if utils.Verify(t.Signature, key, StringValue) || t.Signature == conseous.MasterSignature || t.PublicKey == conseous.MasterPublicKey {
 					sumOfHave := float64(0)
 					flag := false
 					for _, from := range t.From {
@@ -42,8 +42,7 @@ func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction,
 						if err != nil || value.Spent == true {
 							continue
 						}
-
-						if address != value.Address && value.Address != conseous.TestForUXTOAddress {
+						if address != value.Address && value.Address != conseous.MasterAddress {
 							flag = true
 							break
 						}
@@ -61,9 +60,9 @@ func ReceiveValidateTransaction(TransactionChannel chan transaction.Transaction,
 					if sumOfSpent > sumOfHave {
 						continue
 					}
-					//BroadcastTransactionChannel <- t
 					fmt.Println("Sent Transaction:", t.TransactionHash, " in VT")
 					fmt.Println()
+					BroadcastTransactionChannel <- t
 					BlockTransactionChannel <- transactionUtils.ConvertTransaction(t)
 				}
 			}

@@ -4,7 +4,6 @@ import (
 	"block_chain/database/block_control/model"
 	"block_chain/utils"
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -34,10 +33,9 @@ func GetLastBlock() (string, error) {
 	for cursor.Next(context.TODO()) {
 		var result model.BlockControl
 		if err := cursor.Decode(&result); err != nil {
-			return "", err
+			return lastBlock.BlockHash, err
 		}
 		lastBlock = result
-		fmt.Println("Last Block", lastBlock.BlockHash, " in DB repository")
 	}
 	return lastBlock.BlockHash, err
 }

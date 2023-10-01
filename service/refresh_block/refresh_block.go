@@ -56,13 +56,13 @@ func RefreshBlock(BlockTransactionChannel chan blockchain.BlockTransaction, Mine
 					TargetBlock.BlockTop.Difficulty = conseous.GenesisBlockDifficulty
 				} else {
 					b, err := block.GetBlock(blockHash)
-					fmt.Println(b.BlockHash, err)
+					fmt.Println("Last Block: ", blockHash, " in RB")
 					if err != nil {
 						continue
 					}
 					TargetBlock.BlockTop.BlockHeight = b.BlockTop.BlockHeight + 1
 					TargetBlock.BlockTop.Difficulty = b.BlockTop.Difficulty
-					if TargetBlock.BlockTop.BlockHeight%conseous.DifficultyCycle == 0 {
+					if TargetBlock.BlockTop.BlockHeight%conseous.DifficultyCycle == 0 && TargetBlock.BlockTop.BlockHeight != conseous.GenesisBlockHeight {
 						speed, err := block.CheckGenerateSpeed(TargetBlock.BlockTop.BlockHeight)
 						if err == nil {
 							if speed {
@@ -90,7 +90,7 @@ func RefreshBlock(BlockTransactionChannel chan blockchain.BlockTransaction, Mine
 			TargetBlock.BlockTop.PreviousHash = cb.BlockHash
 			TargetBlock.BlockTop.BlockHeight = cb.BlockTop.BlockHeight + 1
 			TargetBlock.BlockTop.Difficulty = cb.BlockTop.Difficulty
-			if TargetBlock.BlockTop.BlockHeight%conseous.DifficultyCycle == 0 {
+			if TargetBlock.BlockTop.BlockHeight%conseous.DifficultyCycle == 0 && TargetBlock.BlockTop.BlockHeight != conseous.GenesisBlockHeight {
 				speed, err := block.CheckGenerateSpeed(TargetBlock.BlockTop.BlockHeight)
 				if err == nil {
 					if speed {

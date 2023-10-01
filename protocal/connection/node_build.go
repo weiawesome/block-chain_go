@@ -6,8 +6,8 @@ import (
 	"block_chain/database/block"
 	"block_chain/database/block_control"
 	"block_chain/initalize"
+	"block_chain/protocal/connection/content"
 	"block_chain/protocal/conseous"
-	"block_chain/utils"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -16,53 +16,53 @@ import (
 
 func InitBlocks(conn net.Conn) {
 	flag := false
-	request, err := json.Marshal(InitBlock{BlockHash: InitQuery})
+	request, err := json.Marshal(content.QueryBlock{QueryType: content.QueryByHash, BlockHash: content.InitQuery})
 	if err != nil {
-		utils.LogError(err.Error())
+		fmt.Println("Error found ", err.Error(), " in BN")
 		return
 	}
-	SendContent(conn, string(request))
+	content.SendContent(conn, string(request))
 	for {
 		totalResponse := ""
-		buffer := make([]byte, BufferSize)
+		buffer := make([]byte, content.BufferSize)
+		connFlag := false
 		for {
-			n, err := conn.Read(buffer)
+			_, err := conn.Read(buffer)
 			if err != nil {
-				utils.LogError(err.Error())
+				fmt.Println("Error found ", err.Error(), " in BN")
+				connFlag = true
 				break
 			}
-			response := string(buffer[n:])
+			response := string(buffer)
 			totalResponse += response
-			if strings.HasSuffix(totalResponse, SuffixString) {
-				totalResponse = totalResponse[:len(totalResponse)-len(SuffixString)]
+			if strings.ContainsAny(totalResponse, content.SuffixString) {
+				totalResponse = totalResponse[:strings.Index(totalResponse, content.SuffixString)]
 				break
 			}
+		}
+		if connFlag {
+			break
 		}
 
-		var data interface{}
+		var data content.ReturnBlock
 		err := json.Unmarshal([]byte(totalResponse), &data)
-		if err != nil {
-			utils.LogError(err.Error())
-			return
-		}
-		switch v := data.(type) {
-		case ReturnBlock:
-			if err := block.SetBlock(v.Block); err == nil {
-				err := initalize.BuildUTXO(v.Block)
+		if err == nil && data.Block.BlockHash != "" {
+			if err := block.SetBlock(data.Block); err == nil {
+				err := initalize.BuildUTXO(data.Block)
 				if err != nil {
 					return
 				}
-				if v.Block.BlockTop.PreviousHash == conseous.GenesisBlockPreviousHash {
+				if data.Block.BlockTop.PreviousHash == conseous.GenesisBlockPreviousHash {
 					return
 				}
-				request, err := json.Marshal(InitBlock{BlockHash: v.Block.BlockTop.PreviousHash})
+				request, err := json.Marshal(content.QueryBlock{QueryType: content.QueryByHash, BlockHash: data.Block.BlockTop.PreviousHash})
 				if err != nil {
-					utils.LogError(err.Error())
+					fmt.Println("Error found ", err.Error(), " in BN")
 					return
 				}
-				SendContent(conn, string(request))
+				content.SendContent(conn, string(request))
 				if !flag {
-					err := block_control.SetLastBlock(v.Block.BlockHash)
+					err := block_control.SetLastBlock(data.Block.BlockHash)
 					if err != nil {
 						return
 					}
@@ -71,8 +71,9 @@ func InitBlocks(conn net.Conn) {
 			} else {
 				return
 			}
-		default:
-			SentErrorMessage(conn, "Unknown Request")
+			continue
+		} else {
+			content.SentErrorMessage(conn, "Unknown Request")
 			return
 		}
 	}
@@ -82,87 +83,132 @@ func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Trans
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}(conn)
 
-	buffer := make([]byte, BufferSize)
+	buffer := make([]byte, content.BufferSize)
 
 	for {
+		flag := false
 		totalRequest := ""
 		for {
 			_, err := conn.Read(buffer)
 			if err != nil {
-				utils.LogError(err.Error())
+				fmt.Println("Error found ", err.Error(), " in BN")
+				flag = true
 				break
 			}
 			request := string(buffer)
 			totalRequest += request
-			if strings.ContainsAny(totalRequest, SuffixString) {
-				totalRequest = totalRequest[:strings.Index(totalRequest, SuffixString)]
-				fmt.Println("Success")
+			if strings.ContainsAny(totalRequest, content.SuffixString) {
+				totalRequest = totalRequest[:strings.Index(totalRequest, content.SuffixString)]
 				break
 			}
 		}
-		fmt.Println(totalRequest)
-		var data interface{}
-		err := json.Unmarshal([]byte(totalRequest), &data)
-		if err != nil {
-			utils.LogError(err.Error())
-			return
+		if flag {
+			break
 		}
-		switch v := data.(type) {
-		case BroadcastTransaction:
-			fmt.Println(v.Transaction.TransactionHash)
-			transactionChannel <- v.Transaction
-			break
-		case BroadcastBlock:
-			blockChannel <- v.Block
-			break
-		case InitBlock:
-			if v.BlockHash == InitQuery {
+		fmt.Println("Get message: ", totalRequest, " in BN")
+
+		var broadcastTransactionData content.BroadcastTransaction
+		var broadcastBlockData content.BroadcastBlock
+		var queryBlockData content.QueryBlock
+		var queryBlockByHeightData content.QueryBlockByHeight
+		var errorMessageData content.ErrorMessage
+		var err error
+
+		err = json.Unmarshal([]byte(totalRequest), &broadcastTransactionData)
+		if err == nil && broadcastTransactionData.Transaction.TransactionHash != "" {
+			fmt.Println("Get new Transaction: ", broadcastTransactionData.Transaction.TransactionHash, " in BN")
+			fmt.Println("Send new Transaction: ", broadcastTransactionData.Transaction.TransactionHash, " in BN")
+			fmt.Println()
+			transactionChannel <- broadcastTransactionData.Transaction
+			continue
+		}
+		err = json.Unmarshal([]byte(totalRequest), &broadcastBlockData)
+		if err == nil && broadcastBlockData.Block.BlockHash != "" {
+			fmt.Println("Get new Block: ", broadcastBlockData.Block.BlockHash, " in BN")
+			fmt.Println("Send new Block: ", broadcastBlockData.Block.BlockHash, " in BN")
+			fmt.Println()
+			blockChannel <- broadcastBlockData.Block
+			continue
+		}
+		err = json.Unmarshal([]byte(totalRequest), &queryBlockData)
+		if err == nil && queryBlockData.BlockHash != "" {
+			fmt.Println("Get new Query Block: ", queryBlockData.BlockHash, " in BN")
+			if queryBlockData.BlockHash == content.InitQuery {
 				lastBlock, err := block_control.GetLastBlock()
 				if err != nil {
-					SentErrorMessage(conn, "Error to get last block")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(conn, "Error to get last block")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
 				Block, err := block.GetBlock(lastBlock)
+				fmt.Println("Sent Last Block ", Block.BlockHash, " in BN")
+				fmt.Println()
 				if err != nil {
-					SentErrorMessage(conn, "Error to get block")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(conn, "Error to get block")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
-				response, err := json.Marshal(ReturnBlock{Block: Block})
+				response, err := json.Marshal(content.ReturnBlock{Block: Block})
 				if err != nil {
-					SentErrorMessage(conn, "Error to send block")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(conn, "Error to send block")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
-				SendContent(conn, string(response))
+				content.SendContent(conn, string(response))
 			} else {
-				Block, err := block.GetBlock(v.BlockHash)
+				Block, err := block.GetBlock(queryBlockData.BlockHash)
 				if err != nil {
-					SentErrorMessage(conn, "Error to get block")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(conn, "Error to get block")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
-				response, err := json.Marshal(ReturnBlock{Block: Block})
+				response, err := json.Marshal(content.ReturnBlock{Block: Block})
 				if err != nil {
-					SentErrorMessage(conn, "Error to send block")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(conn, "Error to send block")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
-				SendContent(conn, string(response))
+				fmt.Println("Sent Block ", Block.BlockHash, " in BN")
+				fmt.Println()
+				content.SendContent(conn, string(response))
 			}
-			break
-		case ErrorMessage:
-			fmt.Println(v.Error)
-			utils.LogError(v.Error)
-			break
-		default:
-			SentErrorMessage(conn, "Unknown request")
+			continue
 		}
+		err = json.Unmarshal([]byte(totalRequest), &queryBlockByHeightData)
+		if err == nil && queryBlockByHeightData.QueryType != "" {
+			fmt.Println("Get new Query Block by height: ", queryBlockByHeightData.BlockHeight, " in BN")
+			blocks, err := block.GetBlockByBlockHeight(queryBlockByHeightData.BlockHeight)
+			if err != nil {
+				content.SentErrorMessage(conn, err.Error())
+				continue
+			}
+			var returnBlocks []content.ReturnBlock
+			for _, b := range blocks {
+				returnBlocks = append(returnBlocks, content.ReturnBlock{Block: b})
+			}
+			response, err := json.Marshal(returnBlocks)
+			if err != nil {
+				content.SentErrorMessage(conn, "Error to send block")
+				fmt.Println("Error found ", err.Error(), " in BN")
+				continue
+			}
+			fmt.Println("Sent Block by height in BN")
+			fmt.Println()
+			content.SendContent(conn, string(response))
+			continue
+		}
+		err = json.Unmarshal([]byte(totalRequest), &errorMessageData)
+		if err == nil && errorMessageData.Error != "" {
+			fmt.Println("Get Error Message ", errorMessageData.Error, " in BN")
+			fmt.Println("Sent Error Message ", "Unknown request", " in BN")
+			fmt.Println()
+			continue
+		}
+		content.SentErrorMessage(conn, "Unknown request")
 	}
 }
 func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChannel chan transaction.Transaction, BroadcastBlockChannel chan blockchain.Block) {
@@ -170,28 +216,33 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 	for {
 		select {
 		case val := <-ConnectionChannel:
-			fmt.Println(val)
+			fmt.Println("Get new connection ", val.RemoteAddr(), " in BN")
 			connections = append(connections, val)
 		case b := <-BroadcastBlockChannel:
-			response, err := json.Marshal(BroadcastBlock{Block: b})
+			fmt.Println("Get new BroadcastBlock ", b.BlockHash, " in BN")
+			fmt.Println("Sent new BroadcastBlock ", b.BlockHash, " in BN")
+			fmt.Println()
+			response, err := json.Marshal(content.BroadcastBlock{Block: b})
 			for _, connection := range connections {
 				if err != nil {
-					SentErrorMessage(connection, "Error to send block")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(connection, "Error to send block")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
-				SendContent(connection, string(response))
+				content.SendContent(connection, string(response))
 			}
 		case t := <-BroadcastTransactionChannel:
-			response, err := json.Marshal(BroadcastTransaction{Transaction: t})
-			fmt.Println(t.TransactionHash)
+			fmt.Println("Get new Transaction ", t.TransactionHash, " in BN")
+			fmt.Println("Sent new Transaction ", t.TransactionHash, " in BN")
+			fmt.Println()
+			response, err := json.Marshal(content.BroadcastTransaction{Transaction: t})
 			for _, connection := range connections {
 				if err != nil {
-					SentErrorMessage(connection, "Error to send transaction")
-					utils.LogError(err.Error())
+					content.SentErrorMessage(connection, "Error to send transaction")
+					fmt.Println("Error found ", err.Error(), " in BN")
 					continue
 				}
-				SendContent(connection, string(response))
+				content.SendContent(connection, string(response))
 			}
 		default:
 			continue
@@ -199,6 +250,7 @@ func CommunicateClient(ConnectionChannel chan net.Conn, BroadcastTransactionChan
 
 	}
 }
+
 func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan transaction.Transaction, BlockChannel chan blockchain.Block, BroadcastTransactionChannel chan transaction.Transaction, BroadcastBlockChannel chan blockchain.Block) {
 	ConnectionChannel := make(chan net.Conn)
 	go CommunicateClient(ConnectionChannel, BroadcastTransactionChannel, BroadcastBlockChannel)
@@ -208,30 +260,30 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 		if err != nil {
 			continue
 		}
-		//go ReceiveReplyClient(conn, TransactionChannel, BlockChannel)
-		//go InitBlocks(conn)
+		go ReceiveReplyClient(conn, TransactionChannel, BlockChannel)
+		go InitBlocks(conn)
 		ConnectionChannel <- conn
 	}
 
 	listener, err := net.Listen("tcp", NodeAddr)
 	if err != nil {
-		panic(err)
-		return
+		fmt.Println(err)
 	}
 	defer func(listener net.Listener) {
 		err := listener.Close()
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}(listener)
 
+	fmt.Println("Started to build node in BN")
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			utils.LogError(err.Error())
+			fmt.Println("Error found ", err.Error(), " in BN")
 			continue
 		}
-		fmt.Println(conn.RemoteAddr())
+		fmt.Println("Get new node ", conn.RemoteAddr(), " in BN")
 		go ReceiveReplyClient(conn, TransactionChannel, BlockChannel)
 		ConnectionChannel <- conn
 	}

@@ -25,14 +25,20 @@ func GetBlock(Hash string) (blockchain.Block, error) {
 	return finalResult.Block, err
 }
 
-func GetBlockByBlockHeight(Height int64) (blockchain.Block, error) {
+func GetBlockByBlockHeight(Height int64) ([]blockchain.Block, error) {
+	var finalResult []blockchain.Block
 	BlockCollection := utils.GetBlockCollection()
 	filter := bson.M{model.BlockHeightKey: Height}
+	cursor, err := BlockCollection.Find(context.TODO(), filter)
+	for cursor.Next(context.TODO()) {
+		var result model.BlockKeyValue
+		if err := cursor.Decode(&result); err != nil {
+			return finalResult, err
+		}
+		finalResult = append(finalResult, result.Block)
+	}
 
-	var result model.BlockKeyValue
-	err := BlockCollection.FindOne(context.TODO(), filter).Decode(&result)
-
-	return result.Block, err
+	return finalResult, err
 }
 
 func SetBlock(Block blockchain.Block) error {
@@ -76,5 +82,5 @@ func CheckGenerateSpeed(Height int64) (bool, error) {
 	if errUpper != nil {
 		return false, errUpper
 	}
-	return blockLower.BlockTop.TimeStamp-blockUpper.BlockTop.TimeStamp > conseous.AverageBlockGenerateTime*conseous.DifficultyCycle, nil
+	return blockLower[0].BlockTop.TimeStamp-blockUpper[0].BlockTop.TimeStamp > conseous.AverageBlockGenerateTime*conseous.DifficultyCycle, nil
 }

@@ -14,7 +14,9 @@ const (
 	DifficultyLower          = 0
 	DifficultyUpper          = 256
 	MineEmpty                = false
-	TestForUXTOHash          = "TestForUXTOHash"
-	TestForUXTOAddress       = "TestForUXTOAddress"
-	TestForAmount            = 1000
+	MasterHash               = "MasterHash"
+	MasterAddress            = "MasterAddress"
+	MasterPublicKey          = "MasterPublicKey"
+	MasterSignature          = "MasterSignature"
+	MasterAmount             = 1000
 )

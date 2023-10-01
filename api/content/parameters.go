@@ -1,4 +1,4 @@
-package connection
+package content
 
 const (
 	SuffixString = "\r\nEOF\r\n"

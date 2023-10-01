@@ -13,7 +13,7 @@ func ReceiveValidateBlock(BroadcastBlockChannel chan blockchain.Block, MinersSuc
 			fmt.Println("Receive Block:", mb.BlockHash, " in VB")
 			fmt.Println("Sent Block:", mb.BlockHash, " in VB")
 			fmt.Println()
-			//BroadcastBlockChannel <- mb
+			BroadcastBlockChannel <- mb
 			RefreshBlockChannel <- mb
 		case b := <-BlockChannel:
 			_, err := block.GetBlock(b.BlockHash)

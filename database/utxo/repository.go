@@ -21,7 +21,7 @@ func SetUTXO(transaction blockchain.BlockTransaction) error {
 		}
 	}
 	for i, from := range transaction.From {
-		if from.UTXOHash == conseous.TestForUXTOHash {
+		if from.UTXOHash == conseous.MasterHash {
 			continue
 		}
 		if utxo, err := GetUTXO(from.UTXOHash, i); err != nil {
@@ -46,8 +46,8 @@ func ReplaceUTXO(value model.UTXOKeyValue) error {
 	return err
 }
 func GetUTXO(TransactionHash string, Index int) (model.UTXOKeyValue, error) {
-	if TransactionHash == conseous.TestForUXTOHash {
-		return model.UTXOKeyValue{TransactionHash: TransactionHash, Index: rand.Int(), Amount: conseous.TestForAmount, Spent: false, Address: conseous.TestForUXTOAddress}, nil
+	if TransactionHash == conseous.MasterHash {
+		return model.UTXOKeyValue{TransactionHash: TransactionHash, Index: rand.Int(), Amount: conseous.MasterAmount, Spent: false, Address: conseous.MasterAddress}, nil
 	}
 	UTXOCollection := utils.GetUTXOCollection()
 	filter := bson.M{model.UTXOKey: TransactionHash, model.UTXOIndex: Index}
@@ -68,7 +68,7 @@ func ReverseUTXO(transaction blockchain.BlockTransaction) error {
 		}
 	}
 	for i, from := range transaction.From {
-		if from.UTXOHash == conseous.TestForUXTOHash {
+		if from.UTXOHash == conseous.MasterHash {
 			continue
 		}
 		if utxo, err := GetUTXO(from.UTXOHash, i); err != nil {

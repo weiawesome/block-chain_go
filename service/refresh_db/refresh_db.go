@@ -79,6 +79,10 @@ func RefreshDb(RefreshBlockChannel chan blockchain.Block, CompleteBlockChannel c
 						continue
 					}
 				}
+				err = block.SetBlock(rb)
+				if err != nil {
+					continue
+				}
 				if rb.BlockTop.BlockHeight > lastBlock.BlockTop.BlockHeight {
 					fmt.Println("Higher Block", rb.BlockHash, " in RDB")
 					err := block_control.SetLastBlock(rb.BlockHash)
@@ -87,6 +91,7 @@ func RefreshDb(RefreshBlockChannel chan blockchain.Block, CompleteBlockChannel c
 					}
 					lastBlock = rb
 					if lastBlock.BlockTop.BlockHeight-conseous.BlockChecked >= conseous.GenesisBlockHeight {
+						fmt.Println("Start to delete short part in RDB")
 						tmpBlock := lastBlock
 						for i := 0; i < conseous.BlockChecked; i++ {
 							tmpBlock, err = block.GetBlock(tmpBlock.BlockTop.PreviousHash)
@@ -94,41 +99,13 @@ func RefreshDb(RefreshBlockChannel chan blockchain.Block, CompleteBlockChannel c
 								continue
 							}
 						}
-						err := block_control.DeleteCandidateBlock(tmpBlock.BlockHash)
+						blockHeight, err := block.GetBlockByBlockHeight(tmpBlock.BlockTop.BlockHeight + 1)
 						if err != nil {
 							continue
 						}
-						candidateBlocks, err := block_control.GetCandidateBlock()
-						if err != nil {
-							continue
-						}
-						for _, candidateBlock := range candidateBlocks {
-							b, err := block.GetBlock(candidateBlock)
-							if err != nil {
-								return
-							}
-							if b.BlockTop.BlockHeight == tmpBlock.BlockTop.BlockHeight+1 {
-								if b.BlockTop.PreviousHash != tmpBlock.BlockHash {
-									err := block_control.DeleteCandidateBlock(b.BlockHash)
-									if err != nil {
-										continue
-									}
-									for _, transaction := range b.BlockTransactions {
-										err := utxo.ReverseUTXO(transaction)
-										if err != nil {
-											continue
-										}
-									}
-									err = block.DeleteBlock(b.BlockHash)
-									if err != nil {
-										continue
-									}
-								}
-							} else if b.BlockTop.BlockHeight == tmpBlock.BlockTop.BlockHeight+1 {
-								err := block_control.DeleteCandidateBlock(b.BlockHash)
-								if err != nil {
-									continue
-								}
+						for _, b := range blockHeight {
+							if b.BlockTop.PreviousHash != tmpBlock.BlockHash {
+								fmt.Println("Delete block ", b.BlockHash, " in RDB")
 								for _, transaction := range b.BlockTransactions {
 									err := utxo.ReverseUTXO(transaction)
 									if err != nil {
@@ -140,11 +117,6 @@ func RefreshDb(RefreshBlockChannel chan blockchain.Block, CompleteBlockChannel c
 									continue
 								}
 							}
-
-						}
-						err = block_control.SetCheckedBlock(tmpBlock.BlockHash)
-						if err != nil {
-							continue
 						}
 					}
 				}

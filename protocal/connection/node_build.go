@@ -17,6 +17,7 @@ import (
 func InitBlocks(conn net.Conn) {
 	flag := false
 	request, err := json.Marshal(content.QueryBlock{QueryType: content.QueryByHash, BlockHash: content.InitQuery})
+	fmt.Println("Init DataBase by Query in BN")
 	if err != nil {
 		//fmt.Println("Error found ", err.Error(), " in BN")
 		return
@@ -43,19 +44,25 @@ func InitBlocks(conn net.Conn) {
 		if connFlag {
 			break
 		}
+		fmt.Println("Get message in BN")
 
 		var data content.ReturnBlock
 		err := json.Unmarshal([]byte(totalResponse), &data)
 		if err == nil && data.Block.BlockHash != "" {
+			fmt.Println("Get Block ", data.Block.BlockHash, " in BN")
 			if err := block.SetBlock(data.Block); err == nil {
+				fmt.Println("Success to set Block ", data.Block.BlockHash, " in BN")
 				err := initalize.BuildUTXO(data.Block)
 				if err != nil {
 					return
 				}
+				fmt.Println("Success to build UTXO in BN")
 				if data.Block.BlockTop.PreviousHash == conseous.GenesisBlockPreviousHash {
-					return
+					fmt.Println("Arrive to GenesisBlock in BN")
+					break
 				}
 				request, err := json.Marshal(content.QueryBlock{QueryType: content.QueryByHash, BlockHash: data.Block.BlockTop.PreviousHash})
+				fmt.Println("Request new Block ", data.Block.BlockTop.PreviousHash, " in BN")
 				if err != nil {
 					//fmt.Println("Error found ", err.Error(), " in BN")
 					return
@@ -69,6 +76,7 @@ func InitBlocks(conn net.Conn) {
 				}
 				flag = true
 			} else {
+				fmt.Println("Fail to set Block ", data.Block.BlockHash, " in BN")
 				return
 			}
 			continue
@@ -77,6 +85,7 @@ func InitBlocks(conn net.Conn) {
 			return
 		}
 	}
+	fmt.Println("End of the initialization of db in BN")
 }
 
 func ReceiveReplyClient(conn net.Conn, transactionChannel chan transaction.Transaction, blockChannel chan blockchain.Block) {
@@ -260,8 +269,8 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 		if err != nil {
 			continue
 		}
+		InitBlocks(conn)
 		go ReceiveReplyClient(conn, TransactionChannel, BlockChannel)
-		go InitBlocks(conn)
 		ConnectionChannel <- conn
 	}
 
@@ -276,7 +285,7 @@ func BuildNode(NodeAddr string, NodeAddresses []string, TransactionChannel chan 
 		}
 	}(listener)
 
-	fmt.Println("Started to build node in BN")
+	fmt.Println("Started to build node ", listener.Addr(), " in BN")
 	for {
 		conn, err := listener.Accept()
 		if err != nil {

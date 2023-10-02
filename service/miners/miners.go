@@ -12,7 +12,7 @@ func Miner(Lower uint32, Upper uint32, MinerBlockChannel chan blockchain.Block, 
 		case b := <-MinerBlockChannel:
 			fmt.Println("Miners Receive in MS")
 			fmt.Println("Difficulty: ", b.BlockTop.Difficulty, " in MS")
-			fmt.Println("Size of transaction in MS", len(b.BlockTransactions))
+			fmt.Println("Size of transaction: ", len(b.BlockTransactions), " in MS")
 			if len(b.BlockTransactions) <= 1 && conseous.MineEmpty == false {
 				fmt.Println("Stop")
 				continue
